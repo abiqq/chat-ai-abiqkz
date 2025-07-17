@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Generator - Ryzumi AI</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #1e1e1e, #2c2c2c);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+
+    .header {
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      width: 100%;
+      max-width: 600px;
+      margin-bottom: 30px;
+    }
+
+    input, select {
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      font-size: 16px;
+      background: #2e2e2e;
+      color: white;
+    }
+
+    button {
+      padding: 12px;
+      background-color: #00bcd4;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #0097a7;
+    }
+
+    .image-box {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #1e1e1e;
+      border: 1px solid #444;
+      border-radius: 12px;
+      padding: 20px;
+      min-height: 300px;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .image-box img {
+      max-width: 100%;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+
+    .loading {
+      font-style: italic;
+      color: #aaa;
+      text-align: center;
+    }
+
+    /* ✨ Sparkle Animation */
+    @keyframes sparkle {
+      0% {
+        opacity: 0;
+        transform: scale(0.95);
+        box-shadow: 0 0 0px rgba(255, 255, 255, 0);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.02);
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+      }
+      100% {
+        transform: scale(1);
+        box-shadow: 0 0 0px rgba(255, 255, 255, 0);
+      }
+    }
+
+    .image-box img.sparkle {
+      animation: sparkle 1.2s ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">🖼️ Image Generator</div>
+  <form id="imageForm">
+    <select id="modelSelect">
+      <option value="text2img">Txt2Img V2</option>
+      <option value="flux-schnell">Flux Schnell</option>
+      <option value="flux-diffusion">Flux Diffusion</option>
+    </select>
+    <input type="text" id="promptInput" placeholder="Deskripsi gambar..." required>
+    <button type="submit">Generate</button>
+  </form>
+  <div class="image-box" id="imageBox">
+    <div class="loading">Masukkan deskripsi dan klik Generate untuk melihat hasil.</div>
+  </div>
+
+  <script>
+    const imageForm = document.getElementById('imageForm');
+    const promptInput = document.getElementById('promptInput');
+    const modelSelect = document.getElementById('modelSelect');
+    const imageBox = document.getElementById('imageBox');
+
+    imageForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const prompt = promptInput.value.trim();
+      const model = modelSelect.value;
+      if (!prompt) return;
+
+      imageBox.innerHTML = '<div class="loading">⏳ Menghasilkan gambar...</div>';
+
+      let endpoint = '';
+      if (model === 'text2img') {
+        endpoint = 'https://api.ryzumi.vip/api/ai/v2/text2img';
+      } else if (model === 'flux-schnell') {
+        endpoint = 'https://api.ryzumi.vip/api/ai/flux-schnell';
+      } else if (model === 'flux-diffusion') {
+        endpoint = 'https://api.ryzumi.vip/api/ai/flux-diffusion';
+      }
+
+      try {
+        const url = `${endpoint}?prompt=${encodeURIComponent(prompt)}`;
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: { 'accept': 'image/png' }
+        });
+
+        if (!response.ok) throw new Error('Gagal mengambil gambar');
+
+        const blob = await response.blob();
+        const imageUrl = URL.createObjectURL(blob);
+
+        imageBox.innerHTML = `<img src="${imageUrl}" alt="Generated Image" class="sparkle">`;
+      } catch (err) {
+        console.error(err);
+        imageBox.innerHTML = '<div class="loading">❌ Gagal menghasilkan gambar.</div>';
+      }
+    });
+  </script>
+</body>
+</html>
