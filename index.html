@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat AI - AbiqKZ</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #121212;
+      color: white;
+      display: flex;
+      height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 70px;
+      background: #1e1e1e;
+      padding: 20px 10px;
+      border-right: 1px solid #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+      transition: width 0.3s ease;
+      overflow: hidden;
+    }
+
+    .sidebar.expanded {
+      width: 200px;
+      align-items: flex-start;
+    }
+
+    .sidebar button {
+      background: none;
+      border: none;
+      color: #aaa;
+      font-size: 20px;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #aaa;
+      font-size: 18px;
+      text-decoration: none;
+      transition: color 0.3s ease, transform 0.3s ease;
+    }
+
+    .menu-item:hover {
+      color: #00bcd4;
+      transform: scale(1.05);
+    }
+
+    .menu-item .label {
+      display: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .sidebar.expanded .menu-item .label {
+      display: inline;
+      opacity: 1;
+    }
+
+    /* Chat Container */
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-header {
+      padding: 20px;
+      background: #272727;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+      border-bottom: 1px solid #444;
+    }
+
+    .prompt-section {
+      padding: 10px 20px;
+      background: #1e1e1e;
+      border-bottom: 1px solid #444;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .prompt-section input, .prompt-section select {
+      width: 100%;
+      padding: 8px;
+      border-radius: 6px;
+      border: none;
+      background: #272727;
+      color: white;
+    }
+
+    .chat-box {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .bubble {
+      max-width: 80%;
+      padding: 10px 15px;
+      border-radius: 15px;
+      line-height: 1.4;
+      animation: fadeIn 0.5s ease;
+    }
+
+    .user {
+      align-self: flex-end;
+      background-color: #00bcd4;
+      color: white;
+    }
+
+    .ai {
+      align-self: flex-start;
+      background-color: #333;
+      color: #eee;
+    }
+
+    .chat-input {
+      display: flex;
+      padding: 15px;
+      background: #272727;
+      border-top: 1px solid #444;
+    }
+
+    .chat-input input {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      font-size: 16px;
+      background: #1e1e1e;
+      color: white;
+    }
+
+    .chat-input button {
+      margin-left: 10px;
+      padding: 10px 20px;
+      background-color: #00bcd4;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <button id="toggleSidebar" title="Toggle Sidebar">
+      <i class="fas fa-bars"></i>
+    </button>
+    <a href="image-generator.html" class="menu-item" title="Image Generator">
+      <i class="fas fa-image"></i>
+      <span class="label">Image Generator</span>
+    </a>
+  </div>
+
+  <!-- Chat Container -->
+  <div class="chat-container">
+    <div class="chat-header">🤖 Ryzumi AI Chat</div>
+    <div class="prompt-section">
+      <select id="versionSelect">
+        <option value="v1">GPT V1</option>
+        <option value="v2">GPT V2</option>
+      </select>
+      <input type="text" id="promptInput" placeholder="System prompt (opsional)...">
+      <input type="text" id="imageInput" placeholder="URL gambar (khusus GPT V2)...">
+    </div>
+    <div class="chat-box" id="chatBox">
+      <div class="bubble ai">Halo! Ada yang bisa saya bantu?</div>
+    </div>
+    <form class="chat-input" id="chatForm">
+      <input type="text" id="userInput" placeholder="Tulis pesan..." required>
+      <button type="submit">Kirim</button>
+    </form>
+  </div>
+
+  <script>
+    // Sidebar toggle
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('toggleSidebar');
+    toggleBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('expanded');
+    });
+
+    // Chat logic
+    const chatBox = document.getElementById('chatBox');
+    const chatForm = document.getElementById('chatForm');
+    const userInput = document.getElementById('userInput');
+    const promptInput = document.getElementById('promptInput');
+    const imageInput = document.getElementById('imageInput');
+    const versionSelect = document.getElementById('versionSelect');
+    let sessionId = Date.now() + '-' + Math.floor(Math.random() * 10000);
+
+    function addBubble(text, sender) {
+      const bubble = document.createElement('div');
+      bubble.classList.add('bubble', sender);
+      bubble.textContent = text;
+      chatBox.appendChild(bubble);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    chatForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const text = userInput.value.trim();
+      const prompt = promptInput.value.trim();
+      const imageUrl = imageInput.value.trim();
+      const version = versionSelect.value;
+      if (!text) return;
+
+      addBubble(text, 'user');
+      userInput.value = '';
+      addBubble('⏳ Sedang memproses...', 'ai');
+
+      try {
+        let url = '';
+        if (version === 'v1') {
+          url = `https://api.ryzumi.vip/api/ai/chatgpt?text=${encodeURIComponent(text)}`;
+          if (prompt) url += `&prompt=${encodeURIComponent(prompt)}`;
+          url += `&session=${encodeURIComponent(sessionId)}`;
+        } else if (version === 'v2') {
+          url = `https://api.ryzumi.vip/api/ai/v2/chatgpt?text=${encodeURIComponent(text)}`;
+          if (prompt) url += `&prompt=${encodeURIComponent(prompt)}`;
+          if (imageUrl) url += `&image_url=${encodeURIComponent(imageUrl)}`;
+          url += `&session=${encodeURIComponent(sessionId)}`;
+        }
+
+        const res = await fetch(url, {
+          method: 'GET',
+          headers: { 'accept': 'application/json' }
+        });
+
+        const data = await res.json();
+        const bubbles = document.querySelectorAll('.ai');
+        bubbles[bubbles.length - 1].remove(); // remove loading
+
+        const reply = data.result || data.response || '❌ Tidak ada jawaban.';
+        addBubble(reply, 'ai');
+        sessionId = data.session || sessionId;
+      } catch (err) {
+        const bubbles = document.querySelectorAll('.ai');
+        bubbles[bubbles.length - 1].remove(); // remove loading
+        addBubble('❌ Terjadi kesalahan saat mengambil jawaban.', 'ai');
+        console.error(err);
+      }
+    });
+  </script>
+</body>
+</html>
